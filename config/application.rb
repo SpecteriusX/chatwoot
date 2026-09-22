@@ -52,6 +52,21 @@ module Chatwoot
     enterprise_initializers = Rails.root.join('enterprise/config/initializers')
     Dir[enterprise_initializers.join('**/*.rb')].each { |f| require f } if enterprise_initializers.exist?
 
+    # Armeta customization overlay (see custom/README.md).
+    # Mirrors the enterprise wiring above so that ChatwootApp.extensions -> 'custom' resolves.
+    # Guarded on existence so the app still boots if the overlay is absent.
+    if Rails.root.join('custom').exist?
+      config.eager_load_paths << Rails.root.join('custom/lib')
+      config.eager_load_paths << Rails.root.join('custom/listeners')
+      # rubocop:disable Rails/FilePath
+      config.eager_load_paths += Dir["#{Rails.root}/custom/app/**"]
+      # rubocop:enable Rails/FilePath
+      config.paths['app/views'].unshift('custom/app/views')
+
+      custom_initializers = Rails.root.join('custom/config/initializers')
+      Dir[custom_initializers.join('**/*.rb')].each { |f| require f } if custom_initializers.exist?
+    end
+
     # Settings in config/environments/* take precedence over those specified here.
     # Application configuration can go into files in config/initializers
     # -- all .rb files in that directory are automatically loaded after loading
