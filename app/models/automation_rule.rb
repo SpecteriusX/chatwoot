@@ -26,6 +26,8 @@ class AutomationRule < ApplicationRecord
   # Conversation-level delayed rules key their episode on status; only status and attributes
   # that never change after the delay (inbox) are safe to also filter on.
   DELAYED_CONVERSATION_ATTRIBUTES = %w[status inbox_id].freeze
+  SUPPORTED_EVENT_NAMES = %w[conversation_created conversation_updated conversation_opened
+                             conversation_resolved message_created].freeze
 
   belongs_to :account
   has_many :pending_executions, class_name: 'AutomationRulePendingExecution', dependent: :delete_all
@@ -36,6 +38,7 @@ class AutomationRule < ApplicationRecord
   validate :query_operator_presence
   validate :query_operator_value
   validates :account_id, presence: true
+  validates :event_name, inclusion: { in: SUPPORTED_EVENT_NAMES }
   validates :execution_delay, numericality: { only_integer: true, in: EXECUTION_DELAY_RANGE }, allow_nil: true
   validate :execution_delay_supported_conditions
   validate :execution_delay_supported_event
