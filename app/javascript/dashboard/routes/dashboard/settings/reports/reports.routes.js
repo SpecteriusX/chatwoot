@@ -137,7 +137,7 @@ export default {
         {
           path: 'sla',
           name: 'sla_reports',
-          meta,
+          meta: { ...meta, featureFlag: FEATURE_FLAGS.SLA },
           component: SLAReports,
         },
         {
