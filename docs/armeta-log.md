@@ -7,6 +7,43 @@ Detailed working notes (orientation, verification, scope decisions) live outside
 
 ---
 
+## 2026-09-23 — Security and robustness review
+
+Authorised testing of authorization, input validation, injection and the unauthenticated public
+surface. Full detail in `armeta-security-review.md`.
+
+**No authorization or injection vulnerabilities found.** Cross-account access, privilege
+escalation, unauthenticated access and IDOR all correctly rejected. Filter values are
+parameterised — an injected value returned 0 rows rather than the full table.
+
+**Six robustness defects fixed**, all malformed input reaching the model layer and raising 500
+where `CLAUDE.md` requires a 422 at the controller boundary:
+
+- `fix(filters): return 422 instead of 500 for malformed filter payloads`
+- `fix(conversations): validate status and snoozed_until at the controller boundary`
+- `fix(automation): return 422 instead of 500 for non-array conditions and actions`
+- `fix(automation): validate event_name against supported events`
+
+Notable causes: `AttachmentConcern` crashed at the *controller* layer before model validation
+ever ran, so model guards alone were insufficient; and because Rails runs every validator,
+guarding only the first `conditions` validator still crashed in the other three. An automation
+rule with `event_name: "nope"` was found already in the database — created by an earlier test and
+silently dead, which is what prompted adding `SUPPORTED_EVENT_NAMES`.
+
+**Two findings reported rather than changed**, both needing a product decision and carrying
+breakage risk if fixed carelessly:
+
+- `widget/inbox_members` returns the full agent roster and live presence to anyone holding the
+  public `website_token`. Upstream design; the widget needs it. A server-side filter is viable
+  but `availability_status` combines the DB column with Redis presence, so it must be done with
+  tests.
+- An invalid `assignee_id` silently unassigns and returns 200, because `find_by` returns nil for
+  both "not supplied" and "not found".
+
+Also fixed during the session: `fix(super-admin): hide enterprise-only features when enterprise
+is absent` — the settings page advertised six locked EE upsell cards, and account features could
+still be toggled into a state whose backend no longer exists.
+
 ## 2026-09-23 — Enterprise removal
 
 ### Decisions
