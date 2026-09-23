@@ -52,7 +52,8 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     result = ::Conversations::FilterService.new(params.permit!, current_user, current_account).perform
     @conversations = result[:conversations]
     @conversations_count = result[:count]
-  rescue CustomExceptions::CustomFilter::InvalidAttribute,
+  rescue CustomExceptions::CustomFilter::InvalidPayload,
+         CustomExceptions::CustomFilter::InvalidAttribute,
          CustomExceptions::CustomFilter::InvalidOperator,
          CustomExceptions::CustomFilter::InvalidQueryOperator,
          CustomExceptions::CustomFilter::InvalidValue => e

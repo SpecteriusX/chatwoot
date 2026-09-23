@@ -199,6 +199,8 @@ class FilterService
   end
 
   def validate_query_operator
+    raise CustomExceptions::CustomFilter::InvalidPayload.new({}) unless @params[:payload].is_a?(Array)
+
     @params[:payload].each_with_index do |query_hash, index|
       validate_single_condition(query_hash)
       validate_string_values(query_hash)

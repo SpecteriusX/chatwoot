@@ -17,6 +17,12 @@ module CustomExceptions::CustomFilter
     end
   end
 
+  class InvalidPayload < CustomExceptions::Base
+    def message
+      I18n.t('errors.custom_filters.invalid_payload')
+    end
+  end
+
   class InvalidValue < CustomExceptions::Base
     def message
       I18n.t('errors.custom_filters.invalid_value', attribute_name: @data[:attribute_name])

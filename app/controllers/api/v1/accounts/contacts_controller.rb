@@ -64,7 +64,8 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     contacts = result[:contacts]
     @contacts_count = result[:count]
     @contacts = fetch_contacts(contacts)
-  rescue CustomExceptions::CustomFilter::InvalidAttribute,
+  rescue CustomExceptions::CustomFilter::InvalidPayload,
+         CustomExceptions::CustomFilter::InvalidAttribute,
          CustomExceptions::CustomFilter::InvalidOperator,
          CustomExceptions::CustomFilter::InvalidQueryOperator,
          CustomExceptions::CustomFilter::InvalidValue => e
