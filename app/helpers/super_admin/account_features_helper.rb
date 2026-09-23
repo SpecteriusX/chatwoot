@@ -26,6 +26,12 @@ module SuperAdmin::AccountFeaturesHelper
     features.except(*deprecated_features)
   end
 
+  def self.filter_premium_features(features)
+    return features if ChatwootApp.enterprise?
+
+    features.except(*account_premium_features)
+  end
+
   def self.sort_and_transform_features(features, display_names)
     features.sort_by { |key, _| display_names[key] || key }
             .to_h
@@ -35,6 +41,7 @@ module SuperAdmin::AccountFeaturesHelper
   def self.partition_features(features)
     filtered = filter_internal_features(features)
     filtered = filter_deprecated_features(filtered)
+    filtered = filter_premium_features(filtered)
     display_names = feature_display_names
 
     regular, premium = filtered.partition { |key, _value| account_premium_features.exclude?(key) }
