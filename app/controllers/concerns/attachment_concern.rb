@@ -4,6 +4,7 @@ module AttachmentConcern
   def validate_and_prepare_attachments(actions, record = nil)
     blobs = []
     return [blobs, actions, nil] if actions.blank?
+    return [nil, nil, I18n.t('errors.actions.invalid_format')] unless actions.is_a?(Array)
 
     sanitized = actions.map do |action|
       next action unless action[:action_name] == 'send_attachment'

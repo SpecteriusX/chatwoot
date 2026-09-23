@@ -76,6 +76,7 @@ class AutomationRule < ApplicationRecord
 
   def json_conditions_format
     return if conditions.blank?
+    return errors.add(:conditions, 'must be an array') unless conditions.is_a?(Array)
 
     attributes = conditions.map { |obj, _| obj['attribute_key'] }
     conditions = attributes - conditions_attributes
@@ -85,6 +86,7 @@ class AutomationRule < ApplicationRecord
 
   def json_actions_format
     return if actions.blank?
+    return errors.add(:actions, 'must be an array') unless actions.is_a?(Array)
 
     attributes = actions.map { |obj, _| obj['action_name'] }
     actions = attributes - actions_attributes
@@ -94,6 +96,7 @@ class AutomationRule < ApplicationRecord
 
   def query_operator_presence
     return if conditions.blank?
+    return unless conditions.is_a?(Array)
 
     operators = conditions.select { |obj, _| obj['query_operator'].nil? }
     errors.add(:conditions, 'Automation conditions should have query operator.') if operators.length > 1
@@ -102,6 +105,8 @@ class AutomationRule < ApplicationRecord
   # This validation ensures logical operators are being used correctly in automation conditions.
   # And we don't push any unsanitized query operators to the database.
   def query_operator_value
+    return unless conditions.is_a?(Array)
+
     conditions.each do |obj|
       validate_single_condition(obj)
     end
@@ -111,6 +116,7 @@ class AutomationRule < ApplicationRecord
   # cannot use attribute_changed conditions.
   def execution_delay_supported_conditions
     return if execution_delay.blank? || conditions.blank?
+    return unless conditions.is_a?(Array)
     return if conditions.none? { |obj| obj['filter_operator'] == 'attribute_changed' }
 
     errors.add(:execution_delay, 'cannot be used with attribute_changed conditions.')
@@ -120,6 +126,7 @@ class AutomationRule < ApplicationRecord
   # distinct periods into one episode, so only status and immutable filters (inbox) are allowed.
   def execution_delay_supported_event
     return if execution_delay.blank? || conditions.blank? || event_name == 'message_created'
+    return unless conditions.is_a?(Array)
     return if conditions.all? { |obj| DELAYED_CONVERSATION_ATTRIBUTES.include?(obj['attribute_key']) }
 
     errors.add(:execution_delay, 'only supports status and inbox conditions for conversation-level events.')

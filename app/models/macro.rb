@@ -67,6 +67,7 @@ class Macro < ApplicationRecord
 
   def json_actions_format
     return if actions.blank?
+    return errors.add(:actions, 'must be an array') unless actions.is_a?(Array)
 
     attributes = actions.map { |obj, _| obj['action_name'] }
     actions = attributes - ACTIONS_ATTRS

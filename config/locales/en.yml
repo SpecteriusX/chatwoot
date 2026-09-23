@@ -96,6 +96,8 @@ en:
       call_already_accepted: '%{agent_name} is already handling the call.'
     assignment_policy:
       not_found: Assignment policy not found
+    actions:
+      invalid_format: Actions must be an array of action objects.
     attachments:
       invalid: Invalid attachment
     upload:
