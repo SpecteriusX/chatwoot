@@ -40,21 +40,21 @@ module Chatwoot
     config.rails_i18n.enabled_modules = [:pluralization]
 
     config.eager_load_paths << Rails.root.join('lib')
-    config.eager_load_paths << Rails.root.join('enterprise/lib')
-    config.eager_load_paths << Rails.root.join('enterprise/listeners')
-    # rubocop:disable Rails/FilePath
-    config.eager_load_paths += Dir["#{Rails.root}/enterprise/app/**"]
-    # rubocop:enable Rails/FilePath
-    # Add enterprise views to the view paths
-    config.paths['app/views'].unshift('enterprise/app/views')
 
-    # Load enterprise initializers alongside standard initializers
-    enterprise_initializers = Rails.root.join('enterprise/config/initializers')
-    Dir[enterprise_initializers.join('**/*.rb')].each { |f| require f } if enterprise_initializers.exist?
+    if Rails.root.join('enterprise').exist?
+      config.eager_load_paths << Rails.root.join('enterprise/lib')
+      config.eager_load_paths << Rails.root.join('enterprise/listeners')
+      # rubocop:disable Rails/FilePath
+      config.eager_load_paths += Dir["#{Rails.root}/enterprise/app/**"]
+      # rubocop:enable Rails/FilePath
+      # Add enterprise views to the view paths
+      config.paths['app/views'].unshift('enterprise/app/views')
 
-    # Armeta customization overlay (see custom/README.md).
-    # Mirrors the enterprise wiring above so that ChatwootApp.extensions -> 'custom' resolves.
-    # Guarded on existence so the app still boots if the overlay is absent.
+      # Load enterprise initializers alongside standard initializers
+      enterprise_initializers = Rails.root.join('enterprise/config/initializers')
+      Dir[enterprise_initializers.join('**/*.rb')].each { |f| require f } if enterprise_initializers.exist?
+    end
+
     if Rails.root.join('custom').exist?
       config.eager_load_paths << Rails.root.join('custom/lib')
       config.eager_load_paths << Rails.root.join('custom/listeners')
