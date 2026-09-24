@@ -4,6 +4,65 @@ Practical reference for the Armeta Chatwoot fork. Command-first.
 
 ---
 
+## Part 0 — Bring the project up
+
+### Every day
+
+```bash
+sudo systemctl start docker                 # only if the daemon is not running
+cd ~/armeta/chatwoot/chatwoot
+docker compose up -d postgres redis mailhog vite rails sidekiq
+```
+
+Wait ~60s for vite, then open http://localhost:3000 and log in as
+`john@acme.inc` / `Password1!`.
+
+Check it is actually serving before assuming a problem:
+
+```bash
+curl -s -o /dev/null -w 'app %{http_code}\n'    http://localhost:3000/app/login
+curl -s -o /dev/null -w 'assets %{http_code}\n' http://localhost:3000/vite-dev/@vite/client
+```
+
+Both should be `200`. Naming the services explicitly avoids starting `base`, which is only a
+build template and does nothing useful when running.
+
+### From scratch (new machine, or a fresh Docker daemon)
+
+```bash
+# 1. environment file
+cp .env.example .env
+sed -i "s/^SECRET_KEY_BASE=.*/SECRET_KEY_BASE=$(openssl rand -hex 64)/" .env
+sed -i 's/^SMTP_ADDRESS=$/SMTP_ADDRESS=mailhog/' .env
+
+# 2. build — base first, rails and vite derive from it (~10 min)
+docker compose build base
+docker compose build rails vite
+
+# 3. backing services
+docker compose up -d postgres redis mailhog
+
+# 4. database (creates chatwoot_dev + chatwoot_test and seeds)
+docker compose run --rm --no-deps rails bundle exec rails db:chatwoot_prepare
+
+# 5. everything else
+docker compose up -d vite rails sidekiq
+```
+
+`docker-compose.override.yml` must be present in the repo root — it carries three fixes without
+which the stack does not work (see Part 3). It is untracked, hidden via `.git/info/exclude`, so
+a fresh clone will not have it.
+
+### Stopping
+
+```bash
+docker compose stop          # keep containers and data
+docker compose down          # remove containers, keep volumes
+sudo systemctl stop docker   # free the RAM entirely
+```
+
+---
+
 ## Part 1 — Docker in 15 commands
 
 Docker runs each service in its own **container** from an **image** (a template). Compose starts
@@ -109,7 +168,10 @@ docker compose up -d
 | Database empty after recreating the container | Upstream mounts the volume at `/data/postgres`, but the image writes to `/var/lib/postgresql/data` | `PGDATA=/data/postgres/pgdata` — already in the override |
 | Assets 404, Rails tries to build Vite itself and runs out of memory | Vite bound `::1` only. Upstream sets `VITE_DEV_SERVER_HOST`, which nothing reads | `VITE_RUBY_HOST` — already in the override |
 | Sidekiq floods logs with errors after a version change | Jobs serialized against the old code failing on retry | Clear the queues (below) |
-| Laptop lags badly while Docker runs | Docker Desktop VM over-allocated | `~/.docker/desktop/settings-store.json` → `Cpus: 4`, `MemoryMiB: 4096` |
+| Laptop lags badly while Docker runs | Containers competing for RAM | Check with `docker stats --no-stream`; vite is the heaviest (~1 GB). On bare Engine there is no VM reserving memory up front |
+| `permission denied` on `/var/run/docker.sock` | User not in the `docker` group | `sudo usermod -aG docker $USER`, then log out and back in |
+| `failed to mkdir .../chatwoot_bundle/_data/...: file exists` | Stale `chatwoot_bundle` volume | `docker compose down && docker volume rm chatwoot_bundle`. Gems live at `/gems` in the image, so this volume holds nothing of value |
+| Images and volumes "disappeared" | Switched between Docker Desktop and bare Engine | Each daemon has its own storage (`~/.docker/desktop/` vs `/var/lib/docker`). Nothing is deleted, but a rebuild and `db:chatwoot_prepare` are needed on the new daemon |
 | `git commit` fails on `lint-staged` | Host has no `node_modules` | `pnpm install` on the host, or `--no-verify` after linting in-container |
 
 **Clear stuck Sidekiq jobs** — do this after every upstream version bump:
